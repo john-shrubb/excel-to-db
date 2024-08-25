@@ -11,3 +11,5 @@ Install the library for interacting with xlsx sheets and PostgreSQL with the bel
 ```sh
 pip install openpyxl pyscopg2
 ```
+
+**[Licensed under the MIT.](./LICENSE)**
