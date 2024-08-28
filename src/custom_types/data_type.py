@@ -1,4 +1,4 @@
-from data_type_enum import DataTypeEnum
+from custom_types.data_type_enum import DataTypeEnum
 from helper_functions.validate_float import validate_float
 from helper_functions.stringify_value import stringify_value
 import datetime
@@ -32,14 +32,14 @@ class DataType:
 		
 		For example: A smallint can only take values between -32768 and 32767.
 
-		When passing in a date, use format YYYY-MM-DD.
+		When passing in a datetime, use format YYYY-MM-DD HH:MM:SS.
 
 		:param value: The value to parse.
 		:param autoCorrect: If True, will attempt to correct the value if it is invalid. If False, will raise an error if the value is invalid.
 		"""
 		# Match with all possible data types.
 		# TODO: Make validation more modular.
-		match DataTypeEnum:
+		match self.data_type:
 			case DataTypeEnum.smallint:
 				# Validate the value
 				if not validate_float(value):
