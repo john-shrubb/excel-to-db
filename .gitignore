@@ -1,3 +1,4 @@
 # If you decide to create a virtual environment with a different name, edit the below line to exclude it from git.
 excel-to-db/
 .~lock.*
+__pycache__
