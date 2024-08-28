@@ -2,9 +2,9 @@
 # SQL identifiers and key words must begin with a letter ( a - z , but also letters with diacritical marks and non-Latin letters) or an underscore ( _ ). Subsequent characters in an identifier or key word can be letters, underscores, digits ( 0 - 9 ), or dollar signs ( $ ).
 
 def ident_check(value : str) -> bool:
-	"""
+	'''
 	Checks if a string is a valid SQL identifier.
-	"""
+	'''
 	# Prevent an out of range error.
 	if len(value) == 0:
 		return False

@@ -4,7 +4,7 @@ from helper_functions.stringify_value import stringify_value
 import datetime
 
 class DataType:
-	"""
+	'''
 	The DataType class is used to represent the data type values in a column should be converted to.
 
 	Once defined, use the .parse() method to convert a value to the appropriate value which can be inserted into an SQL query.
@@ -13,7 +13,7 @@ class DataType:
 	:param db_column_name: The name of the column in the database.
 	:param data_type: The data type the column should be converted to. Should be a value from the DataTypeEnum class, unless the type is an enumerator or other custom type in which pass a string as the name of the enumerator or type.
 	:param possible_values: A list of possible values the column can take. If None, the column can take any value.
-	"""
+	'''
 	def __init__(
 		self,
 		table_column_name: str,
@@ -27,7 +27,7 @@ class DataType:
 		self.possible_values = possible_values
 
 	def parse(self, value : str, autoCorrect : bool = False) -> str:
-		"""
+		'''
 		Parse a value into a form which can be passed into a database. Will also perform some validation to ensure that value doesn't violate DB constraints.
 		
 		For example: A smallint can only take values between -32768 and 32767.
@@ -36,7 +36,7 @@ class DataType:
 
 		:param value: The value to parse.
 		:param autoCorrect: If True, will attempt to correct the value if it is invalid. If False, will raise an error if the value is invalid.
-		"""
+		'''
 		# Match with all possible data types.
 		# TODO: Make validation more modular.
 		match self.data_type:
