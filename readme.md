@@ -9,7 +9,7 @@ The whole point of this project is to make a somewhat easy method of porting exc
 
 Install the library for interacting with xlsx sheets and PostgreSQL with the below command:
 ```sh
-pip install openpyxl pyscopg2
+pip install openpyxl pyscopg2 python-dotenv
 ```
 
 ## Dotenv
