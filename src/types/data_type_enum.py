@@ -11,10 +11,8 @@ class DataTypeEnum(Enum):
 	boolean = 'boolean'
 	date = 'date'
 	datetime = 'datetime'
-	timestamp = 'timestamp'
 	varchar = 'varchar'
 	# Be careful when using char.
 	# Going under the defined length of a char type will result in the value being padded with spaces with no warning or error.
 	char = 'char'
 	text = 'text'
-	float = 'float'

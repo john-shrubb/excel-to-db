@@ -38,7 +38,8 @@ class DataType:
 		:param autoCorrect: If True, will attempt to correct the value if it is invalid. If False, will raise an error if the value is invalid.
 		"""
 		# Match with all possible data types.
-		match self.possible_values:
+		# TODO: Make validation more modular.
+		match DataTypeEnum:
 			case DataTypeEnum.smallint:
 				# Validate the value
 				if not validate_float(value):
@@ -159,9 +160,23 @@ class DataType:
 					raise ValueError(f'Value {value} is not a valid datetime.')
 
 				return stringify_value(value)
+			case DataTypeEnum.varchar:
+				if self.possible_values and not value in self.possible_values:
+					raise ValueError(f'Value {value} is not a valid value for this column.')
+				
+				return stringify_value(value)
+			case DataTypeEnum.char:
+				if self.possible_values and not value in self.possible_values:
+					raise ValueError(f'Value {value} is not a valid value for this column.')
+
+				return stringify_value(value)
+			case DataTypeEnum.text:
+				if self.possible_values and not value in self.possible_values:
+					raise ValueError(f'Value {value} is not a valid value for this column.')
+
+				return stringify_value(value)
 			case _:
 				# Assume the data type is a custom type, e.g: an enumerator.
+				if self.possible_values and not value in self.possible_values:
+					raise ValueError(f'Value {value} is not a valid value for this column.')
 				return stringify_value(value)
-
-
-		return value
