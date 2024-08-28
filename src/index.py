@@ -5,6 +5,12 @@ from custom_types.data_type import DataType
 from helper_functions.sql_identifier_check import ident_check
 from helper_functions.generate_id import generate_id
 from helper_functions.stringify_value import stringify_value
+from getpass import getpass
+from psycopg2 import connect # type: ignore
+from dotenv import load_dotenv
+from os import getenv
+
+load_dotenv('.env', verbose=True)
 
 # Argument parsing stuff.
 parser = argparse.ArgumentParser(prog='Excel to DB', description='Convert an Excel file to a Database.')
@@ -50,6 +56,16 @@ sheet_object = wb.active
 if sheet_object == None:
 	raise TypeError('No active sheet found.')
 	exit()
+
+table_name = ''
+
+while True:
+	table_name = input('Enter the name of the table to insert the data into: ')
+	if not ident_check(table_name):
+		print('Invalid table name.')
+		continue
+	else:
+		break
 
 # Get the amount of columns.
 max_columns = sheet_object.max_column
@@ -103,10 +119,12 @@ for i in range(1, max_columns + 1):
 			break
 
 # Print out the data types. (DEBUG)
-for data_type in data_types:
-	print(f'{data_type.table_column_name} -> {data_type.db_column_name} -> {data_type.data_type}')
+# for data_type in data_types:
+# 	print(f'{data_type.table_column_name} -> {data_type.db_column_name} -> {data_type.data_type}')
 
 # Also debug - Read the first rows
+
+statements = []
 
 for row in range(2, sheet_object.max_row + 1):
 	to_insert : dict[str, str]= {}
@@ -116,11 +134,59 @@ for row in range(2, sheet_object.max_row + 1):
 		data_type = data_types[column - 1]
 
 		# DEBUG - Print the data type and the parsed value.
-		print(f'{data_type.data_type} -> {data_type.parse(str(sheet_object.cell(row=row, column=column).value))}')
+		# print(f'{data_type.data_type} -> {data_type.parse(str(sheet_object.cell(row=row, column=column).value))}')
 
 		# Add the value to the dictionary.
 		to_insert[data_type.db_column_name] = data_type.parse(str(sheet_object.cell(row=row, column=column).value))
 
-	print(
-		f'INSERT INTO table_name ({', '.join(to_insert.keys())}) VALUES ({', '.join(to_insert.values())});'
-	)
+	statements.append(f'INSERT INTO {table_name} ({', '.join(to_insert.keys())}) VALUES ({', '.join(to_insert.values())});')
+
+# Close the workbook.
+wb.close()
+
+# Get database connection details.
+
+db_cursor = 0
+
+while True:
+	db_host = getenv('db_host') or input('Enter the database host (Default localhost): ')
+	db_port = getenv('db_port') or input('Enter the database port (Default 5432): ')
+	db_name = getenv('db_database') or input('Enter the database name: ')
+	db_user = getenv('db_login') or input('Enter the database user: ')
+	db_password = getenv('db_pass') or getpass('Enter the database password (Input hidden): ')
+
+	# Attempt to connect to the database.
+	try:
+		db_cursor = connect(
+			database = db_name,
+			host = db_host,
+			port = db_port,
+			user = db_user,
+			password = db_password,
+		).cursor()
+		
+		# Check that the table exists.
+		try:
+			db_cursor.execute(f'SELECT * FROM {table_name};')
+		except Exception as e:
+			print('Table specified does not exist in the database.\n', e)
+			exit()
+	except Exception as e:
+		print('Error connecting to the database.\n', e)
+		continue
+	else:
+		break
+
+print('Executing SQL statements...')
+
+# Attempt to execute each SQL statement.
+# Errors will be caught and displayed.
+for statement in statements:
+	try:
+		db_cursor.execute(statement)
+	except Exception as e:
+		print(f'Error executing SQL statement.\n{e}')
+
+db_cursor.connection.commit()
+print('All statements executed.')
+db_cursor.close()
