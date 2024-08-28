@@ -160,23 +160,10 @@ class DataType:
 					raise ValueError(f'Value {value} is not a valid datetime.')
 
 				return stringify_value(value)
-			case DataTypeEnum.varchar:
-				if self.possible_values and not value in self.possible_values:
-					raise ValueError(f'Value {value} is not a valid value for this column.')
-				
-				return stringify_value(value)
-			case DataTypeEnum.char:
+			# I could technically remove these other cases and use the default case.
+			# I left it in for readability.
+			case DataTypeEnum.text | DataTypeEnum.char | DataTypeEnum.varchar | _:
 				if self.possible_values and not value in self.possible_values:
 					raise ValueError(f'Value {value} is not a valid value for this column.')
 
-				return stringify_value(value)
-			case DataTypeEnum.text:
-				if self.possible_values and not value in self.possible_values:
-					raise ValueError(f'Value {value} is not a valid value for this column.')
-
-				return stringify_value(value)
-			case _:
-				# Assume the data type is a custom type, e.g: an enumerator.
-				if self.possible_values and not value in self.possible_values:
-					raise ValueError(f'Value {value} is not a valid value for this column.')
 				return stringify_value(value)
