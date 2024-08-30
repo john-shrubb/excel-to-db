@@ -1,8 +1,8 @@
-from custom_types.data_type_enum import DataTypeEnum
-from helper_functions.validate_float import validate_float
-from helper_functions.stringify_value import stringify_value
+from .data_type_enum import DataTypeEnum
+from ..helper_functions.validate_float import validate_float
+from ..helper_functions.stringify_value import stringify_value
 from datetime import datetime
-from helper_functions.parse_date import parse_date
+from ..helper_functions.parse_date import parse_date
 
 class DataType:
 	'''
