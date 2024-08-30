@@ -1,0 +1,37 @@
+[
+	{
+		"columnName": "Forename",
+		"dbColumnName": "forename",
+		"columnType": "text"
+	},
+	{
+		"columnName": "Surname",
+		"dbColumnName": "surname",
+		"columnType": "text"
+	},
+	{
+		"columnName": "Date of Birth",
+		"dbColumnName": "dob",
+		"columnType": "date"
+	},
+	{
+		"columnName": "Address Line 1",
+		"dbColumnName": "adline1",
+		"columnType": "text"
+	},
+	{
+		"columnName": "Postcode",
+		"dbColumnName": "postcode",
+		"columnType": "varchar"
+	},
+	{
+		"columnName": "Active",
+		"dbColumnName": "active",
+		"columnType": "boolean"
+	},
+	{
+		"columnName": "Credit Score",
+		"dbColumnName": "creditscore",
+		"columnType": "int"
+	}
+]
