@@ -72,7 +72,7 @@ class ExcelToDB:
 		if len(self.column_types) != len(column_names):
 			raise ValueError('Not all column types have been inserted.')
 	
-	def generate_sql(self, table_name : str, randidcol : str | None, randidlen : int | None) -> list[str]:
+	def generate_sql(self, table_name : str, randidcol : str | None = None, randidlen : int | None = None) -> list[str]:
 		'''
 		Generates an SQL query to populate a table.
 		'''
