@@ -1,192 +1,180 @@
-import openpyxl
-import argparse
-from custom_types.data_type_enum import DataTypeEnum
+from custom_types.excel_to_db import ExcelToDB
+from custom_types.connection_details import ConnectionDetails
 from custom_types.data_type import DataType
-from helper_functions.sql_identifier_check import ident_check
-from helper_functions.generate_id import generate_id
-from helper_functions.stringify_value import stringify_value
-from getpass import getpass
-from psycopg2 import connect # type: ignore
+from custom_types.data_type_enum import DataTypeEnum
 from dotenv import load_dotenv
+from argparse import ArgumentParser
+from openpyxl import load_workbook
 from os import getenv
+from getpass import getpass
+from helper_functions.sql_identifier_check import ident_check
 
-load_dotenv('.env', verbose=True)
+parser = ArgumentParser(description='Excel -> DB: Read an Excel file and insert the data into a PostgreSQL table.')
+parser.add_argument('--file-path', '-f', type=str, dest='filepath', help='The path to the Excel file to load.')
+parser.add_argument('--env-path', '-e', type=str, dest='envpath', help='The path to the .env file to load. Defaults to .env.')
+parser.add_argument('--table-name', '-t', type=str, dest='tablename', help='The name of the table to insert the data into.')
 
-# Argument parsing stuff.
-parser = argparse.ArgumentParser(prog='Excel to DB', description='Convert an Excel file to a Database.')
-parser.add_argument('--file_path', type=str, help='The path to the Excel file to convert.')
-parser.add_argument('-c', type=str, help='The name of the column to insert a randomm ID into.')
-parser.add_argument('-l', type=int, help='The length of the random ID to insert.')
+group = parser.add_argument_group('Random ID Column Generation')
+group.add_argument('--rand-col-name', '-c', type=str, dest='randcolname', help='The name of the column to generate ID values for.')
+group.add_argument('--rand-col-length', '-l', type=int, dest='randcollength', help='The length of the random IDs to generate.')
 
-print('Excel -> DB v0.0.1')
-print('------------------\n')
+args = parser.parse_args()
 
-# Path will go from the current working directory when the script is executed.
-file_path = ''
+# If this script is being ran from the commandline, then the file will act as a CLI interface for ExcelToDB class.
 
-# Try to grab the file path from the arguments.
-if not parser.parse_args().file_path:
-	file_path = input('Enter the path to the XLSX file to convert: ')
-else:
-	file_path = parser.parse_args().file_path
+if __name__ == '__main__':
+	if (args.randcolname and not args.randcollength) or (args.randcollength and not args.randcolname):
+		print('--rand-col-name and --rand-col-length must be used together.')
+		exit(1)
+	
+	table_name = ''
+	if args.tablename is None:
+		while True:
+			table_name = input('Enter the name of the table to insert the data into: ')
 
-rand_id_col_name = parser.parse_args().c
-rand_id_col_length = parser.parse_args().l
-
-if not rand_id_col_name or not rand_id_col_length:
-	print('Random ID column name and length were not provided. Will not insert random IDs.\nExecute with the -h flag for help.')
-else:
-	print(f'Random ID column name: {rand_id_col_name}')
-	print(f'Random ID column length: {rand_id_col_length}')
-
-# Load the workbook
-wb = 0
-
-# Catch if the workbook doesn't exist.
-try:
-	wb = openpyxl.load_workbook(file_path)
-except:
-	print('Error opening this file.')
-	exit()
-
-
-# Get active sheet
-sheet_object = wb.active
-
-if sheet_object == None:
-	raise TypeError('No active sheet found.')
-	exit()
-
-table_name = ''
-
-while True:
-	table_name = input('Enter the name of the table to insert the data into: ')
-	if not ident_check(table_name):
-		print('Invalid table name.')
-		continue
-	else:
-		break
-
-# Get the amount of columns.
-max_columns = sheet_object.max_column
-
-# Get an array of the data types from the enum
-valid_data_types = [data_type.value for data_type in DataTypeEnum]
-
-data_types : list[DataType] = []
-
-# The more user interface heavy portion of the app.
-# Prompts the user for the data type of each column.
-print('Please enter the desired data type for each column.\nEnter /? when entering data type to view a list of valid data types.')
-for i in range(1, max_columns + 1):
-	print(f'Column {i}: {sheet_object.cell(row=1, column=i).value}')
-	while True:
-		db_column_name = input('Enter the name of this column in the database: ').strip()
-		if not ident_check(db_column_name):
-			print('Invalid column name.')
-			continue
-
-		# Prevent duplicate column names.
-		for data_type in data_types:
-			if data_type.db_column_name == db_column_name:
-				print('Column already exists.')
+			if len(table_name) > 63 or not ident_check(table_name):
+				print('Table name must be less than 64 characters and must be a valid identifier.')
 				continue
-		
-		# Grab the data type from user.
-		data_type_name = input('Enter data type: ').strip().lower()
-
-		# Display a help message.
-		if data_type_name == '/?':
-			print('Valid data types:')
-			for data_type in DataTypeEnum:
-				print(data_type.value)
-			print('If you are entering a custom data type (For example an enumerator) enter the name of the type.')
-			continue
-
-		# Check that the data type is a valid type of identifier.
-		if not ident_check(data_type_name):
-			print('Invalid data type name.')
-			continue
-
-		# If the data type is valid, add it to the data_types dictionary.
-		else:
-			data_type = DataType(
-				table_column_name = str(sheet_object.cell(row=1, column=i).value),
-				db_column_name = db_column_name,
-				data_type = DataTypeEnum[data_type_name]
-			)
-			data_types.append(data_type)
-			break
-
-# Print out the data types. (DEBUG)
-# for data_type in data_types:
-# 	print(f'{data_type.table_column_name} -> {data_type.db_column_name} -> {data_type.data_type}')
-
-# Also debug - Read the first rows
-
-statements = []
-
-for row in range(2, sheet_object.max_row + 1):
-	to_insert : dict[str, str]= {}
-	to_insert[rand_id_col_name] = stringify_value(generate_id(rand_id_col_length))
-	for column in range(1, max_columns + 1):
-		# Key is the column name, value is the value to insert.
-		data_type = data_types[column - 1]
-
-		# DEBUG - Print the data type and the parsed value.
-		# print(f'{data_type.data_type} -> {data_type.parse(str(sheet_object.cell(row=row, column=column).value))}')
-
-		# Add the value to the dictionary.
-		to_insert[data_type.db_column_name] = data_type.parse(str(sheet_object.cell(row=row, column=column).value))
-
-	statements.append(f'INSERT INTO {table_name} ({', '.join(to_insert.keys())}) VALUES ({', '.join(to_insert.values())});')
-
-# Close the workbook.
-wb.close()
-
-# Get database connection details.
-
-db_cursor = 0
-
-while True:
-	db_host = getenv('db_host') or input('Enter the database host (Default localhost): ')
-	db_port = getenv('db_port') or input('Enter the database port (Default 5432): ')
-	db_name = getenv('db_database') or input('Enter the database name: ')
-	db_user = getenv('db_login') or input('Enter the database user: ')
-	db_password = getenv('db_pass') or getpass('Enter the database password (Input hidden): ')
-
-	# Attempt to connect to the database.
-	try:
-		db_cursor = connect(
-			database = db_name,
-			host = db_host,
-			port = db_port,
-			user = db_user,
-			password = db_password,
-		).cursor()
-		
-		# Check that the table exists.
-		try:
-			db_cursor.execute(f'SELECT * FROM {table_name};')
-		except Exception as e:
-			print('Table specified does not exist in the database.\n', e)
-			exit()
-	except Exception as e:
-		print('Error connecting to the database.\n', e)
-		continue
+			else:
+				break
 	else:
-		break
+		table_name = args.tablename
 
-print('Executing SQL statements...')
+	# Load the Excel file.
+	file_path = ''
 
-# Attempt to execute each SQL statement.
-# Errors will be caught and displayed.
-for statement in statements:
-	try:
-		db_cursor.execute(statement)
-	except Exception as e:
-		print(f'Error executing SQL statement.\n{e}')
+	while True:
+		file_path = args.filepath or input('Enter path to the excel file: ')
 
-db_cursor.connection.commit()
-print('All statements executed.')
-db_cursor.close()
+		try:
+			wb = load_workbook(file_path)
+			break
+		except:
+			print('Failed to load workbook.')
+			continue
+
+	# Load the .env file (Hopefully with connection details)
+	connection_details = ''
+	cursor = None
+
+	# Attempt to load the .env file
+	load_dotenv(args.envpath or '.env')
+
+	# Errored once variable to manually prompt user for connection details if connection fails once.
+	# Prevents a behaviour where because the .env file exists but the connection details are wrong the system will continually spew errors.
+
+	errored_once = False
+	while True:
+		# Attempt to grab details
+		host = getenv('db_host') if not errored_once else None
+		port = getenv('db_port') if not errored_once else None
+		user = getenv('db_login') if not errored_once else None
+		password = getenv('db_pass') if not errored_once else None
+		database = getenv('db_database') if not errored_once else None
+
+		# Seriously, it's wayyy easier to just create a .env file
+		if not host:
+			host = input('Enter the database host: ')
+		if not port:
+			port = input('Enter the database port: ')
+		if not user:
+			user = input('Enter the database username: ')
+		if not password:
+			password = getpass('Enter the database password (Input hidden): ')
+		if not database:
+			database = input('Enter the database name: ')
+		
+		# Attempt to convert port to an integer
+		try:
+			port = int(port)
+			if port < 1 or port > 65535:
+				raise ValueError('Port must be between 1 and 65535.')
+		except:
+			# Or drag the user through the whole process again :)
+			print('Port must be an integer.')
+			errored_once = True
+			continue
+
+		# Create the connection details object
+		connection_details = ConnectionDetails(host=host, port=port, user=user, password=password, database=database)
+
+		try:
+			cursor = ExcelToDB(file_path, connection_details)
+			break
+		except:
+			# Generally there will only be an error here if the connection details are wrong.
+			errored_once = True
+			print('Failed to connect to database.')
+	
+	# Get the column names
+	column_names = cursor.get_column_names()
+
+	# Key: Excel Column Name
+	# Value: DataType object
+	data_types : dict[str, DataType] = {}
+
+	print('You will now be prompted by each column name and asked for a database column name to map this Excel column to.')
+	for column_name in column_names:
+		print('Excel Column Name: ' + column_name)
+		db_column_name = input('Enter the database column name: ')
+		data_type : DataTypeEnum | str | None = None
+		while True:
+			user_input = input('Enter the data type for this column. Enter /? to see a list of data types: ')
+
+			# Help function
+			if user_input == '/?':
+				print('Data Types:')
+				for dt in DataTypeEnum:
+					print(dt.value)
+				continue
+			
+			# Attempt to map to a DataTypeEnum
+			if user_input in DataTypeEnum.__members__:
+				data_type = DataTypeEnum[user_input]
+				break
+			
+			# Otherwise assume the user is attempting to enter a custom data type.
+			# Check that the data type is a valid identifier.
+			if not ident_check(user_input):
+				print('Invalid data type.')
+				continue
+			else:
+				data_type = user_input
+				break
+		
+		data_type_object = DataType(
+			table_column_name=column_name,
+			db_column_name=db_column_name,
+			data_type=data_type
+		)
+
+		data_types[column_name] = data_type_object
+	
+	# Insert the column types into the cursor
+
+	cursor.insert_column_types(list(data_types.values()))
+
+	print('Column types inserted.')
+
+	cursor.generate_sql(table_name=table_name, randidcol=args.randcolname or None, randidlen=args.randcollength or None)
+
+	print('SQL generated.')
+	while True:
+		user_input = input('Would you like to see the SQL before execution? (Y/N): ').lower()
+
+		if user_input == 'y':
+			print('\n'.join(cursor.statements))
+			print('If you do not wish to execute, press CTRL+C/CTRL+Z.')
+			continue
+		elif user_input == 'n':
+			print('Executing.')
+			break
+		else:
+			print('Invalid input.')
+			continue
+
+	cursor.execute_sql()
+
+	print('Data inserted. Quitting.')
+
+	exit(0)
