@@ -35,11 +35,14 @@ class ExcelToDB:
 		'''
 		active = self.wb.active
 
+		# I don't know when this wouldn't be the case, but just in case.
 		if not active:
 			raise TypeError('No active sheet found.')
 
+		# Get the column names.
 		columns = active.iter_rows(min_row=1, max_row=1, values_only=True)
 
+		# Convert the columns to a list of strings.
 		to_return : list[str] = []
 
 		for column in columns:
@@ -77,23 +80,31 @@ class ExcelToDB:
 		Generates an SQL query to populate a table.
 		'''
 
+		# Get the active sheet.
 		active = self.wb.active
 
+		# Denullify the sheet.
 		if not active:
 			raise TypeError('No active sheet found.')
 		
+		# Check that the table name is a valid identifier.
 		if not ident_check(table_name):
 			raise ValueError('Table name is not a valid identifier.')
 		
-
+		# Check that the random ID column name is a valid identifier and that the length is valid.
 		if randidcol:
+			# Check that the column name is a valid identifier.
 			if not ident_check(randidcol):
 				raise ValueError('Random ID column name is not a valid identifier.')
 			
+			# Why would anyone need a 255 digit random ID?
+			# With 255 digits, you could assign 10 IDs for every grain of sand on Earth.
 			if not randidlen or randidlen < 1 or randidlen > 255:
-				raise ValueError('Random ID length must be greater than 0.')
+				raise ValueError('Random ID length must be greater than 0 and lower than 255.')
 		
+		# Generate the SQL statements.
 		statements = []
+
 		for row_number in range(2, active.max_row + 1):
 			# Key: DB Column Name
 			# Value: Value to insert
@@ -112,6 +123,7 @@ class ExcelToDB:
 				to_insert[data_type.db_column_name] = data_type.parse(str(active.cell(row=row_number, column=column_number).value))
 			
 
+			# If a random ID column is to be generated, generate it.
 			if randidcol:
 				assert randidlen is not None
 				to_insert[randidcol] = generate_id(randidlen)
