@@ -149,6 +149,7 @@ if __name__ == '__main__':
 		# ]
 
 		for column in data:
+			# Extract the values from the JSON object
 			table_column_name : str = column['columnName']
 			db_column_name : str = column['dbColumnName']
 			column_type : str = column['columnType']
@@ -158,21 +159,25 @@ if __name__ == '__main__':
 				print('Invalid JSON structure.')
 				exit(1)
 			
+			# Check that the DB column name is a valid identifier
 			if not ident_check(db_column_name):
 				print(f'Invalid database column name: {db_column_name}')
 				exit(1)
 
+			# Check that the table column name exists in the Excel file
 			if table_column_name not in column_names:
 				print(f'Column name {table_column_name} not found in the Excel file.')
 				exit(1)
 			
 			# Check that the data type is a valid DataTypeEnum
+			# If not then assume enum
 			if column_type in DataTypeEnum.__members__:
 				column_type = DataTypeEnum[column_type].value
 			elif not ident_check(column_type):
 				print(f'Invalid data type: {column_type}')
 				exit(1)
 			
+			# Construct the DataType object
 			data_type_object = DataType(
 				table_column_name=table_column_name,
 				db_column_name=column['dbColumnName'],
@@ -182,6 +187,12 @@ if __name__ == '__main__':
 			data_types[table_column_name] = data_type_object
 		
 		print('Column data loaded from JSON file.')
+
+		# Check that all required column names are present.
+		for column_name in column_names:
+			if column_name not in list(data_types.keys()):
+				print(f'Column name {column_name} not found in JSON file.')
+				exit(1)
 	else:
 		print('You will now be prompted by each column name and asked for a database column name to map this Excel column to.')
 		for column_name in column_names:
