@@ -7,9 +7,11 @@ The whole point of this project is to make a somewhat easy method of porting exc
 - PostgreSQL (Tested on 16.4)
 - Python 3.12
 
-Install the library for interacting with xlsx sheets and PostgreSQL with the below command:
-```sh
-pip install openpyxl pyscopg2 python-dotenv
+Set up a virtual environment and install the required packages with the script below:
+```bash
+python3 -m venv excel-to-db
+source excel-to-db/bin/activate
+pip install -r requirements.txt
 ```
 
 ## Dotenv
@@ -81,4 +83,29 @@ Specify the length of the random IDs to generate. Can be any number from 1 to 25
 
 Note that using a small length and making the ID column a primary key may cause the script to crash.
 
-**[Licensed under the MIT.](./LICENSE)**
+## Example Data
+
+This repository includes an example spreadsheet to experiment with.
+
+Create a table in PostgreSQL with the following SQL statement:
+
+```sql
+CREATE TABLE example1 (
+	forename text,
+	surname text,
+	dob date,
+	adline1 text,
+	postcode varchar(9),
+	active boolean,
+	creditscore smallint,
+	id varchar(15)
+);
+```
+
+Running python from the root of this repository and specifying database connection details in a .env file, using the following command should automatically insert the contents of the spreadsheet into a table.
+
+```sh
+python src/index.py -y -c INSERT_COL_NAME -l 15 -j ./exampleData/Example-1.json -f ./exampleData/Example-1.xlsx -t example1
+```
+
+**[Licensed under MIT.](./LICENSE)**
