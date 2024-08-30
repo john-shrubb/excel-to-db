@@ -9,11 +9,14 @@ from os import getenv
 from getpass import getpass
 from helper_functions.sql_identifier_check import ident_check
 import signal
+import json
 
 parser = ArgumentParser(description='Excel -> DB: Read an Excel file and insert the data into a PostgreSQL table.')
 parser.add_argument('--file-path', '-f', type=str, dest='filepath', help='The path to the Excel file to load.')
 parser.add_argument('--env-path', '-e', type=str, dest='envpath', help='The path to the .env file to load. Defaults to .env.')
 parser.add_argument('--table-name', '-t', type=str, dest='tablename', help='The name of the table to insert the data into.')
+parser.add_argument('--json-path', '-j', type=str, dest='jsonpath', help='The path of the JSON file with column data to load.')
+parser.add_argument('--assume-yes', '-y', action='store_true', dest='assumeyes', help='Assume yes to prompts.')
 
 group = parser.add_argument_group('Random ID Column Generation')
 group.add_argument('--rand-col-name', '-c', type=str, dest='randcolname', help='The name of the column to generate ID values for.')
@@ -120,42 +123,102 @@ if __name__ == '__main__':
 	# Value: DataType object
 	data_types : dict[str, DataType] = {}
 
-	print('You will now be prompted by each column name and asked for a database column name to map this Excel column to.')
-	for column_name in column_names:
-		print('Excel Column Name: ' + column_name)
-		db_column_name = input('Enter the database column name: ')
-		data_type : DataTypeEnum | str | None = None
-		while True:
-			user_input = input('Enter the data type for this column. Enter /? to see a list of data types: ')
-
-			# Help function
-			if user_input == '/?':
-				print('Data Types:')
-				for dt in DataTypeEnum:
-					print(dt.value)
-				continue
-			
-			# Attempt to map to a DataTypeEnum
-			if user_input in DataTypeEnum.__members__:
-				data_type = DataTypeEnum[user_input]
-				break
-			
-			# Otherwise assume the user is attempting to enter a custom data type.
-			# Check that the data type is a valid identifier.
-			if not ident_check(user_input):
-				print('Invalid data type.')
-				continue
-			else:
-				data_type = user_input
-				break
+	if args.jsonpath:
+		print('Attempting to load column data from JSON file.')
+		file = ''
+		data = ''
+		try:
+			file = open(args.jsonpath, 'r')
+		except:
+			print('Failed to open JSON file.')
+			exit(1)
 		
-		data_type_object = DataType(
-			table_column_name=column_name,
-			db_column_name=db_column_name,
-			data_type=data_type
-		)
+		try:
+			data = json.load(file)
+		except:
+			print('Invalid JSON file.')
+			exit(1)
+		
+		# JSON Structure:
+		# [
+		# 	{
+		#      "columnName": "Excel Column Name",
+		#      "dbColumnName": "Database Column Name",
+		#      "columnType": "Data Type"
+		#   }
+		# ]
 
-		data_types[column_name] = data_type_object
+		for column in data:
+			table_column_name : str = column['columnName']
+			db_column_name : str = column['dbColumnName']
+			column_type : str = column['columnType']
+
+			# Validate that the JSON structure is correct.
+			if not table_column_name or not db_column_name or not column_type:
+				print('Invalid JSON structure.')
+				exit(1)
+			
+			if not ident_check(db_column_name):
+				print(f'Invalid database column name: {db_column_name}')
+				exit(1)
+
+			if table_column_name not in column_names:
+				print(f'Column name {table_column_name} not found in the Excel file.')
+				exit(1)
+			
+			# Check that the data type is a valid DataTypeEnum
+			if column_type in DataTypeEnum.__members__:
+				column_type = DataTypeEnum[column_type].value
+			elif not ident_check(column_type):
+				print(f'Invalid data type: {column_type}')
+				exit(1)
+			
+			data_type_object = DataType(
+				table_column_name=table_column_name,
+				db_column_name=column['dbColumnName'],
+				data_type=column['columnType']
+			)
+
+			data_types[table_column_name] = data_type_object
+		
+		print('Column data loaded from JSON file.')
+	else:
+		print('You will now be prompted by each column name and asked for a database column name to map this Excel column to.')
+		for column_name in column_names:
+			print('Excel Column Name: ' + column_name)
+			db_column_name = input('Enter the database column name: ')
+			data_type : DataTypeEnum | str | None = None
+			while True:
+				user_input = input('Enter the data type for this column. Enter /? to see a list of data types: ')
+
+				# Help function
+				if user_input == '/?':
+					print('Data Types:')
+					for dt in DataTypeEnum:
+						print(dt.value)
+					continue
+				
+				# Attempt to map to a DataTypeEnum
+				if user_input in DataTypeEnum.__members__:
+					data_type = DataTypeEnum[user_input]
+					break
+				
+				# Otherwise assume the user is attempting to enter a custom data type.
+				# Check that the data type is a valid identifier.
+				if not ident_check(user_input):
+					print('Invalid data type.')
+					continue
+				else:
+					data_type = user_input
+					break
+			
+			data_type_object = DataType(
+				table_column_name=column_name,
+				db_column_name=db_column_name,
+				data_type=data_type
+			)
+
+			data_types[column_name] = data_type_object
 	
 	# Insert the column types into the cursor
 
@@ -166,7 +229,7 @@ if __name__ == '__main__':
 	cursor.generate_sql(table_name=table_name, randidcol=args.randcolname or None, randidlen=args.randcollength or None)
 
 	print('SQL generated.')
-	while True:
+	while True and not args.assumeyes:
 		user_input = input('Would you like to see the SQL before execution? (Y/N): ').lower()
 
 		if user_input == 'y':

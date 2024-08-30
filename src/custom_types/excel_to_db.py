@@ -1,9 +1,9 @@
 from openpyxl import load_workbook, Workbook
 from psycopg2 import connect
-from .connection_details import ConnectionDetails
-from .data_type import DataType
-from ..helper_functions.sql_identifier_check import ident_check
-from ..helper_functions.generate_id import generate_id
+from custom_types.connection_details import ConnectionDetails
+from custom_types.data_type import DataType
+from helper_functions.sql_identifier_check import ident_check
+from helper_functions.generate_id import generate_id
 from datetime import datetime
 
 # When initialised, treat ExcelToDB like a cursor.
