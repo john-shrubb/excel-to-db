@@ -50,16 +50,16 @@ Specify the path of the JSON file to load with the column mappings already loade
 
 ```json
 [
-	{
-		"columnName": "Forename",
-		"dbColumnName": "forename",
-		"columnType": "text"
-	},
-	{
-		"columnName": "Surname",
-		"dbColumnName": "surname",
-		"columnType": "text"
-	},
+  {
+    "columnName": "Forename",
+    "dbColumnName": "forename",
+    "columnType": "text"
+  },
+  {
+    "columnName": "Surname",
+    "dbColumnName": "surname",
+    "columnType": "text"
+  },
 ]
 ```
 
@@ -91,14 +91,14 @@ Create a table in PostgreSQL with the following SQL statement:
 
 ```sql
 CREATE TABLE example1 (
-	forename text,
-	surname text,
-	dob date,
-	adline1 text,
-	postcode varchar(9),
-	active boolean,
-	creditscore smallint,
-	id varchar(15)
+  forename text,
+  surname text,
+  dob date,
+  adline1 text,
+  postcode varchar(9),
+  active boolean,
+  creditscore smallint,
+  id varchar(15)
 );
 ```
 
