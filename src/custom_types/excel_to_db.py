@@ -2,6 +2,8 @@ from openpyxl import load_workbook, Workbook
 from psycopg2 import connect
 from custom_types.connection_details import ConnectionDetails
 from custom_types.data_type import DataType
+from helper_functions.sql_identifier_check import ident_check
+from helper_functions.generate_id import generate_id
 from datetime import datetime
 
 # When initialised, treat ExcelToDB like a cursor.
@@ -56,14 +58,21 @@ class ExcelToDB:
 		column_names = self.get_column_names()
 
 		for data_type in data_types:
-			if (data_type.table_column_name not in column_names):
+			# Should prevent most SQL injection attacks relating to column names.
+			if not ident_check(data_type.db_column_name):
+				raise ValueError(f'Column name {data_type.db_column_name} is not a valid identifier.')
+			
+			# Check if the column name exists in the active sheet.
+			if data_type.table_column_name not in column_names:
 				raise ValueError(f'Column name {data_type.table_column_name} not found in the active sheet.')
+
+			# Add the column type to the dictionary.
 			self.column_types[data_type.table_column_name] = data_type
 		
 		if len(self.column_types) != len(column_names):
 			raise ValueError('Not all column types have been inserted.')
 	
-	def generate_sql(self, table_name : str) -> list[str]:
+	def generate_sql(self, table_name : str, randidcol : str | None, randidlen : int | None) -> list[str]:
 		'''
 		Generates an SQL query to populate a table.
 		'''
@@ -72,6 +81,17 @@ class ExcelToDB:
 
 		if not active:
 			raise TypeError('No active sheet found.')
+		
+		if not ident_check(table_name):
+			raise ValueError('Table name is not a valid identifier.')
+		
+
+		if randidcol:
+			if not ident_check(randidcol):
+				raise ValueError('Random ID column name is not a valid identifier.')
+			
+			if not randidlen or randidlen < 1 or randidlen > 255:
+				raise ValueError('Random ID length must be greater than 0.')
 		
 		statements = []
 		for row_number in range(2, active.max_row + 1):
@@ -91,9 +111,15 @@ class ExcelToDB:
 
 				to_insert[data_type.db_column_name] = data_type.parse(str(active.cell(row=row_number, column=column_number).value))
 			
-			# Generate the SQL statement.
 
-			statement = f'INSERT INTO {table_name} ({', '.join(to_insert.keys())}) VALUES ({', '.join(['%s'] * len(to_insert.values()))});'
+			if randidcol:
+				assert randidlen is not None
+				to_insert[randidcol] = generate_id(randidlen)
+	
+			# Generate the SQL statement.
+			column_names : list[str] = list(to_insert.keys())
+
+			statement = f'INSERT INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join(['%s'] * len(column_names))});'
 
 			# Use the connection to "mogrify" the statement.
 
