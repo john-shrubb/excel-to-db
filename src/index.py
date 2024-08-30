@@ -237,9 +237,49 @@ if __name__ == '__main__':
 
 	print('Column types inserted.')
 
-	cursor.generate_sql(table_name=table_name, randidcol=args.randcolname or None, randidlen=args.randcollength or None)
+	# Allow for user to generate a random ID column if they didn't specify this in the arguments.
+
+	randidcol = ''
+	randidlen = 0
+	
+	# Will be bypassed if the user uses -y flag.
+
+	if not args.assumeyes and not args.randcolname:
+		user_input_randcolname = input('Generate a random ID column? (y/N): ').lower().strip()
+
+		if user_input_randcolname == 'y':
+			while True:
+				# Column name
+				randidcol = input('Enter the name of the random ID column: ')
+
+				# Check that the column name is a valid identifier
+				if not ident_check(randidcol):
+					print('Invalid random ID column name.')
+					continue
+
+				randidlen = input('Enter the length of the random ID column: ')
+
+				# Prevent 3.4 from being a valid length.
+				if not randidlen.isdigit():
+					print('Random ID length must be an integer.')
+					continue
+
+				try:
+					randidlen = int(randidlen)
+					break
+				except:
+					print('Random ID length must be an integer.')
+					continue
+	else:
+		randidcol = args.randcolname or None
+		randidlen = args.randcollength or None
+
+	# Generate the SQL
+	cursor.generate_sql(table_name=table_name, randidcol=randidcol or None, randidlen=randidlen or None)
 
 	print('SQL generated.')
+
+	# Allow the user to check the SQL isn't going to do anything too crazy.
 	while True and not args.assumeyes:
 		user_input = input('Would you like to see the SQL before execution? (Y/N): ').lower()
 
@@ -256,6 +296,6 @@ if __name__ == '__main__':
 
 	cursor.execute_sql()
 
-	print('Data inserted. Quitting.')
+	print('Data inserted. Success.')
 
 	exit(0)
