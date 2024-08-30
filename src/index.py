@@ -8,6 +8,7 @@ from openpyxl import load_workbook
 from os import getenv
 from getpass import getpass
 from helper_functions.sql_identifier_check import ident_check
+import signal
 
 parser = ArgumentParser(description='Excel -> DB: Read an Excel file and insert the data into a PostgreSQL table.')
 parser.add_argument('--file-path', '-f', type=str, dest='filepath', help='The path to the Excel file to load.')
@@ -17,6 +18,12 @@ parser.add_argument('--table-name', '-t', type=str, dest='tablename', help='The 
 group = parser.add_argument_group('Random ID Column Generation')
 group.add_argument('--rand-col-name', '-c', type=str, dest='randcolname', help='The name of the column to generate ID values for.')
 group.add_argument('--rand-col-length', '-l', type=int, dest='randcollength', help='The length of the random IDs to generate.')
+
+def signal_handler(sig, frame):
+	print('\n\nExiting gracefully.')
+	exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 args = parser.parse_args()
 
