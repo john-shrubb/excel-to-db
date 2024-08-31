@@ -1,6 +1,6 @@
 # Excel to Database
 
-The whole point of this project is to make a somewhat easy method of porting excel spreadsheets over to a database.
+This project is a command-line tool that automates the process of importing data from an Excel file into a PostgreSQL database. It provides a set of command line arguments to specify the database details, file paths, table name, and column mappings. The tool also supports generating random IDs for a specified column. With the ability to automate the script using command line arguments, it simplifies the process of importing data and eliminates the need for manual input. The project includes an example spreadsheet and SQL statement to help users get started. 
 
 ## Dependencies
 
