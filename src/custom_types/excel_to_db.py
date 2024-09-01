@@ -29,6 +29,18 @@ class ExcelToDB:
 		except Exception as e:
 			raise Exception(f'Error loading workbook\n{e}')
 	
+	def swap_active_sheet(self, sheet_name: str):
+		'''
+		Swaps the active sheet in the workbook to the sheet with the name provided.
+		'''
+
+		# Check if the sheet exists.
+		if sheet_name not in self.wb.sheetnames:
+			raise ValueError(f'Sheet {sheet_name} not found.')
+		
+		# Set the active sheet to the sheet with the name provided.
+		self.wb.active = self.wb[sheet_name]
+
 	def get_column_names(self) -> list[str]:
 		'''
 		Returns the column names of the active sheet in the workbook.

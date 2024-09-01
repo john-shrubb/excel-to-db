@@ -12,23 +12,26 @@ import signal
 import json
 
 parser = ArgumentParser(description='Excel -> DB: Read an Excel file and insert the data into a PostgreSQL table.')
-parser.add_argument('--file-path', '-f', type=str, dest='filepath', help='The path to the Excel file to load.')
 parser.add_argument('--env-path', '-e', type=str, dest='envpath', help='The path to the .env file to load. Defaults to .env.')
 parser.add_argument('--table-name', '-t', type=str, dest='tablename', help='The name of the table to insert the data into.')
 parser.add_argument('--json-path', '-j', type=str, dest='jsonpath', help='The path of the JSON file with column data to load.')
 parser.add_argument('--assume-yes', '-y', action='store_true', dest='assumeyes', help='Assume yes to prompts.')
 
+group = parser.add_argument_group('XLSX Settings')
+group.add_argument('--file-path', '-f', type=str, dest='filepath', help='The path to the Excel file to load.')
+group.add_argument('--sheet-name', '-s', type=str, dest='sheetname', help='The name of the sheet to load, if the XLSX file has multiple sheets.')
+
 group = parser.add_argument_group('Random ID Column Generation')
 group.add_argument('--rand-col-name', '-c', type=str, dest='randcolname', help='The name of the column to generate ID values for.')
 group.add_argument('--rand-col-length', '-l', type=int, dest='randcollength', help='The length of the random IDs to generate.')
+
+args = parser.parse_args()
 
 def signal_handler(sig, frame):
 	print('\n\nExiting gracefully.')
 	exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
-
-args = parser.parse_args()
 
 # If this script is being ran from the commandline, then the file will act as a CLI interface for ExcelToDB class.
 
@@ -116,6 +119,33 @@ if __name__ == '__main__':
 			errored_once = True
 			print('Failed to connect to database.')
 	
+	if len(wb.sheetnames) > 1 and not args.sheetname:
+		print('Found multiple sheets. Select a sheet:')
+		for sheet in wb.sheetnames:
+			print(sheet)
+		
+		while True:
+			sheet_name = input('Enter the name of the sheet to load: ')
+
+			if sheet_name not in wb.sheetnames:
+				print('Sheet not found.')
+				continue
+			else:
+				cursor.swap_active_sheet(sheet_name)
+				break
+	elif len(wb.sheetnames) > 1 and args.sheetname:
+		
+		if args.sheetname not in wb.sheetnames:
+			print('Sheet not found.')
+			exit(1)
+
+		cursor.swap_active_sheet(args.sheetname)
+	elif len(wb.sheetnames) == 1 and args.sheetname:
+		# If only one sheet, and a user specifies an incorrect sheet name, then an error should be thrown.
+		if args.sheetname != wb.sheetnames[0]:
+			print('Sheet not found.')
+			exit(1)
+
 	# Get the column names
 	column_names = cursor.get_column_names()
 
