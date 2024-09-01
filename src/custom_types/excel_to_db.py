@@ -62,6 +62,42 @@ class ExcelToDB:
 				to_return.append(str(col))
 		
 		return to_return
+
+	def validate_column_names(self, column_names : list[str], table_name : str) -> bool:
+		'''
+		Validates that the list of column names exist in the active sheet.
+		'''
+
+		# Ident check each identifier to prevent SQL injections
+
+		for column_name in column_names:
+			if not ident_check(column_name):
+				raise ValueError(f'Column name {column_name} is not a valid identifier.')
+		
+		if not ident_check(table_name):
+			raise ValueError(f'Table name {table_name} is not a valid identifier.')
+
+		# Create a valid SQL representation of the column names.
+		names = ', '.join(column_names)
+		names_list = list(names)
+		names_list.insert(0, '(')
+		names_list.append(')')
+		names = ''.join(names_list)
+
+		query = f'SELECT exists(SELECT {names} FROM {table_name} LIMIT 1);'
+
+		result = ''
+		try:
+			cursor = self.__connection__.cursor()
+			cursor.execute(query)
+			result = cursor.fetchone()
+		except:
+			return False
+
+		assert result is not None
+
+		return result[0]
+		
 	
 	def insert_column_types(self, data_types : list[DataType]):
 		'''
@@ -142,6 +178,9 @@ class ExcelToDB:
 	
 			# Generate the SQL statement.
 			column_names : list[str] = list(to_insert.keys())
+
+			if not self.validate_column_names(column_names, table_name):
+				raise ValueError('Column names do not exist in the table.')
 
 			statement = f'INSERT INTO {table_name} ({', '.join(column_names)}) VALUES ({', '.join(['%s'] * len(column_names))});'
 

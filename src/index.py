@@ -247,7 +247,14 @@ if __name__ == '__main__':
 			)
 
 			data_types[column_name] = data_type_object
-	
+
+	# Validate that the column names exist in the database.
+	db_column_names = [data_type.db_column_name for data_type in data_types.values()]
+
+	if not cursor.validate_column_names(db_column_names, table_name):
+		print('Column names do not exist in the database.')
+		exit(1)
+
 	# Insert the column types into the cursor
 
 	cursor.insert_column_types(list(data_types.values()))
