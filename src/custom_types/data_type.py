@@ -1,6 +1,5 @@
 from custom_types.data_type_enum import DataTypeEnum
 from helper_functions.validate_float import validate_float
-from helper_functions.stringify_value import stringify_value
 from datetime import datetime
 from helper_functions.parse_date import parse_date
 
@@ -29,13 +28,13 @@ class DataType:
 	
 	def parse(self, value: str) -> str | int | float | datetime:
 		match self.data_type:
-			case DataTypeEnum.varchar | DataTypeEnum.char | DataTypeEnum.text:
+			case DataTypeEnum.string:
 				return str(value)
-			case DataTypeEnum.int | DataTypeEnum.smallint | DataTypeEnum.bigint:
+			case DataTypeEnum.int:
 				if not validate_float(value):
 					raise ValueError(f'Value {value} is not a valid integer.')
 				return int(value)
-			case DataTypeEnum.numeric | DataTypeEnum.real | DataTypeEnum.double:
+			case DataTypeEnum.float:
 				if not validate_float(value):
 					raise ValueError(f'Value {value} is not a valid float.')
 				return float(value)

@@ -2,12 +2,12 @@
 	{
 		"columnName": "Forename",
 		"dbColumnName": "forename",
-		"columnType": "text"
+		"columnType": "string"
 	},
 	{
 		"columnName": "Surname",
 		"dbColumnName": "surname",
-		"columnType": "text"
+		"columnType": "string"
 	},
 	{
 		"columnName": "Date of Birth",
@@ -17,12 +17,12 @@
 	{
 		"columnName": "Address Line 1",
 		"dbColumnName": "adline1",
-		"columnType": "text"
+		"columnType": "string"
 	},
 	{
 		"columnName": "Postcode",
 		"dbColumnName": "postcode",
-		"columnType": "varchar"
+		"columnType": "string"
 	},
 	{
 		"columnName": "Active",
